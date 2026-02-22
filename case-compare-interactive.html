@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PC Case Comparator</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080b0e;
+    --surface: #0f1318;
+    --surface2: #141920;
+    --border: #1c2535;
+    --border2: #243040;
+    --blue: #00c8ff;
+    --orange: #ff6a1a;
+    --text: #dde4ed;
+    --muted: #4e5e72;
+    --muted2: #2e3d50;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh; padding: 36px 12px 60px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
+    pointer-events:none; z-index:0;
+  }
+  .content { position:relative; z-index:1; width:100%; max-width:1225px; }
+
+  header { text-align:center; margin-bottom:32px; }
+  .logo-tag { display:inline-block; font-size:0.57rem; letter-spacing:0.25em; text-transform:uppercase; color:var(--blue); border:1px solid rgba(0,200,255,0.25); padding:3px 10px; border-radius:2px; margin-bottom:10px; }
+  h1 { font-family:'Rajdhani',sans-serif; font-size:clamp(1.8rem,4vw,2.8rem); font-weight:700; letter-spacing:0.08em; }
+  h1 em { color:var(--blue); font-style:normal; }
+  .tagline { font-size:0.61rem; letter-spacing:0.15em; color:var(--muted); text-transform:uppercase; margin-top:7px; }
+
+  .search-row { display:grid; grid-template-columns:1fr 36px 1fr 36px 1fr; margin-bottom:22px; }
+  .search-slot { position:relative; }
+  .search-slot label { display:block; font-size:0.57rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; padding-left:2px; }
+  .lbl-a { color:rgba(0,200,255,0.75)!important; }
+  .lbl-b { color:rgba(255,106,26,0.75)!important; }
+  .lbl-c { color:rgba(123,111,255,0.75)!important; }
+  .search-input-wrap { display:flex; align-items:center; background:var(--surface); border:1px solid var(--border2); border-radius:4px; overflow:hidden; transition:border-color 0.2s; }
+  .search-input-wrap:focus-within { border-color:var(--blue); }
+  .slot-b .search-input-wrap:focus-within { border-color:var(--orange); }
+  .search-input-wrap input { flex:1; background:none; border:none; outline:none; color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:0.77rem; padding:10px 12px; }
+  .search-input-wrap input::placeholder { color:var(--muted2); }
+  .search-btn { background:none; border:none; border-left:1px solid var(--border); color:var(--muted); cursor:pointer; padding:10px 12px; font-family:'Rajdhani',sans-serif; font-weight:700; font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; transition:color 0.2s,background 0.2s; white-space:nowrap; }
+  .clear-btn { background:none; border:none; border-left:1px solid var(--border); color:var(--muted2); cursor:pointer; padding:10px 10px; font-size:0.75rem; line-height:1; transition:color 0.2s; display:none; }
+  .clear-btn.visible { display:block; }
+  .clear-btn:hover { color:#ff3d5a; }
+  .slot-a .search-input-wrap:focus-within { border-color:var(--blue); }
+  .slot-b .search-input-wrap:focus-within { border-color:var(--orange); }
+  .slot-c .search-input-wrap:focus-within { border-color:#7b6fff; }
+  .slot-a .search-btn:hover { color:var(--blue); background:rgba(0,200,255,0.06); }
+  .slot-b .search-btn:hover { color:var(--orange); background:rgba(255,106,26,0.06); }
+  .slot-c .search-btn:hover { color:#7b6fff; background:rgba(123,111,255,0.06); }
+  .search-vs { display:flex; align-items:flex-end; justify-content:center; padding-bottom:4px; font-family:'Rajdhani',sans-serif; font-weight:700; font-size:1rem; color:var(--muted2); letter-spacing:0.1em; }
+  .suggestions { position:absolute; top:100%; left:0; right:0; background:var(--surface2); border:1px solid var(--border2); border-top:none; border-radius:0 0 4px 4px; z-index:100; display:none; max-height:320px; overflow-y:auto; }
+  .suggestions.open { display:block; }
+  .suggestion-item { padding:8px 12px; font-size:0.72rem; cursor:pointer; border-bottom:1px solid var(--border); transition:background 0.15s; }
+  .suggestion-item:last-child { border-bottom:none; }
+  .suggestion-item:hover { background:rgba(255,255,255,0.04); }
+  .sug-name { color:var(--text); }
+  .sug-dims { color:var(--muted); font-size:0.62rem; margin-top:1px; }
+
+  .status-bar { display:none; }
+  .status-dot { width:6px; height:6px; border-radius:50%; background:var(--muted2); flex-shrink:0; }
+  .status-dot.loading { background:var(--blue); animation:pulse 1s infinite; }
+  .status-dot.ok { background:#00e676; }
+  .status-dot.err { background:#ff3d5a; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+  .stage { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:28px 28px 20px; margin-bottom:22px; position:relative; overflow:hidden; }
+  .stage::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--blue),transparent 40%,transparent 60%,var(--orange)); }
+  .stage-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:18px; flex-wrap:wrap; gap:16px; }
+  .stage-title { font-size:0.59rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); }
+  .view-toggle { display:flex; gap:6px; flex-wrap:wrap; }
+  .view-btn { background:none; border:1px solid var(--border2); color:var(--muted); font-family:'Rajdhani',sans-serif; font-size:0.82rem; font-weight:600; letter-spacing:0.06em; padding:7px 16px; border-radius:4px; cursor:pointer; text-transform:uppercase; transition:all 0.2s; white-space:nowrap; }
+  .view-btn.active { border-color:var(--blue); color:var(--blue); background:rgba(0,200,255,0.09); }
+  .view-btn:hover:not(.active) { color:var(--text); border-color:var(--border); }
+
+  /* Desk scene controls */
+  .desk-controls { display:flex; align-items:flex-end; gap:20px; flex-wrap:wrap; }
+  .desk-ctrl { display:flex; flex-direction:column; gap:5px; }
+  .desk-ctrl-label { font-family:'Rajdhani',sans-serif; font-size:0.72rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#7a9ab8; }
+  .desk-ctrl-field { display:flex; align-items:center; background:#0f1620; border:1.5px solid #2a3a52; border-radius:5px; overflow:hidden; transition:border-color 0.15s; }
+  .desk-ctrl-field:focus-within { border-color:var(--blue); }
+  .desk-ctrl-field input { width:72px; background:none; border:none; outline:none; color:#e8f0f8; font-family:'Rajdhani',sans-serif; font-size:1.05rem; font-weight:600; padding:7px 10px; text-align:left; }
+  .desk-ctrl-field input::-webkit-inner-spin-button,
+  .desk-ctrl-field input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+  .desk-ctrl-field input[type=number] { -moz-appearance:textfield; }
+  .desk-ctrl-field .unit { font-family:'Rajdhani',sans-serif; font-size:0.9rem; font-weight:600; color:#5a7a9a; padding:0 10px 0 2px; white-space:nowrap; }
+  .desk-ctrl-field select { background:#0f1620; border:none; outline:none; color:#e8f0f8; font-family:'Rajdhani',sans-serif; font-size:0.95rem; font-weight:600; padding:7px 10px; cursor:pointer; }
+  .desk-ctrl-field select option { background:#0f1620; color:#e8f0f8; }
+
+  .stage-body { display:block; }
+  .desk-sidebar { display:none; }
+  .desk-sidebar.visible { display:none; }
+  .diagram-wrap { width:100%; display:flex; justify-content:center; min-height:200px; position:relative; flex-direction:column; align-items:center; }
+  canvas.iso-canvas { width:100%; max-width:1150px; display:block; touch-action:none; }
+  canvas.iso-canvas.dragging { cursor:grabbing; }
+  canvas.iso-canvas:not(.dragging) { cursor:grab; }
+  svg.diagram { width:100%; max-width:1150px; overflow:visible; }
+  .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; color:var(--muted2); text-align:center; gap:10px; width:100%; }
+  .empty-icon { font-size:2.2rem; opacity:0.3; }
+  .empty-text { font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; }
+  .iso-controls { display:flex; align-items:center; gap:8px; margin-top:12px; }
+  .reset-btn { background:#0f1620; border:1.5px solid #2a3a52; color:#a0b8d0; font-family:'Rajdhani',sans-serif; font-size:0.85rem; font-weight:600; letter-spacing:0.08em; padding:8px 18px; border-radius:5px; cursor:pointer; text-transform:uppercase; transition:all 0.2s; display:flex; align-items:center; gap:6px; }
+  .reset-btn:hover { border-color:var(--blue); color:#e8f0f8; background:rgba(0,200,255,0.1); }
+  .iso-hint { font-size:0.56rem; letter-spacing:0.1em; color:var(--muted2); text-transform:uppercase; }
+
+  .info-grid { background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .info-table { width:100%; border-collapse:collapse; }
+  .info-table thead th { padding:16px 20px; text-align:right; font-family:'Rajdhani',sans-serif; font-size:1.32rem; font-weight:700; letter-spacing:0.06em; border-bottom:2px solid var(--border); border-left:1px solid var(--border); }
+  .info-table thead th.col-label { text-align:left; color:var(--text); font-size:0.92rem; letter-spacing:0.1em; text-transform:uppercase; width:150px; border-left:none; }
+  .info-table thead th.col-a { color:var(--blue); border-bottom-color:var(--blue); }
+  .info-table thead th.col-b { color:var(--orange); border-bottom-color:var(--orange); }
+  .info-table thead th.col-c { color:#7b6fff; border-bottom-color:#7b6fff; }
+  .info-table tbody tr { border-bottom:1px solid var(--border); }
+  .info-table tbody tr:last-child { border-bottom:none; }
+  .info-table tbody tr:nth-child(even) { background:rgba(255,255,255,0.015); }
+  .info-table tbody tr:hover { background:rgba(255,255,255,0.03); }
+  .info-table tbody td { padding:12px 20px; font-size:1.02rem; text-align:right; vertical-align:middle; }
+  .info-table tbody td.row-label { text-align:left; color:#8ba5c0; font-size:1.0rem; letter-spacing:0.04em; white-space:nowrap; font-weight:600; border-left:none; }
+  .info-table tbody td.cell-val { color:var(--text); font-weight:600; font-family:'IBM Plex Mono',monospace; font-size:1.0rem; text-align:right; border-left:1px solid var(--border); }
+  .info-table .section-header td { background:var(--surface2); color:#6a8aaa; font-size:0.62rem; letter-spacing:0.18em; text-transform:uppercase; padding:6px 20px; font-family:'Rajdhani',sans-serif; font-weight:700; }
+  .info-placeholder { display:flex; align-items:center; justify-content:center; color:var(--muted2); font-size:0.64rem; letter-spacing:0.1em; text-transform:uppercase; min-height:100px; }
+  .diff { display:inline-block; font-size:0.68rem; font-weight:700; padding:2px 7px; border-radius:3px; margin-left:6px; white-space:nowrap; font-family:'Rajdhani',sans-serif; letter-spacing:0.04em; }
+  .diff-more { background:rgba(0,200,100,0.22); color:#00e87a; }
+  .diff-less { background:rgba(255,65,65,0.22); color:#ff6666; }
+  .diff-same { background:rgba(255,255,255,0.08); color:#8ba5c0; }
+
+  .tooltip { position:fixed; background:var(--surface2); border:1px solid var(--border2); border-radius:4px; padding:7px 11px; font-size:0.64rem; color:var(--text); pointer-events:none; opacity:0; transition:opacity 0.15s; z-index:999; white-space:nowrap; line-height:1.7; }
+  .tooltip.show { opacity:1; }
+</style>
+</head>
+<body>
+<div class="content">
+  <header>
+    <h1><span style="color:var(--blue)">PC</span> <span style="color:var(--orange)">Case</span> <span style="color:#7b6fff">Compare</span></h1>
+  </header>
+
+  <div class="search-row">
+    <div class="search-slot slot-a" id="slotA">
+      <label class="lbl-a">Case A</label>
+      <div class="search-input-wrap">
+        <input type="text" id="inputA" placeholder="e.g. Corsair 4000D" autocomplete="off"/>
+        <button class="search-btn" onclick="lookupCase('A')">Search</button>
+        <button class="clear-btn" id="clearA" onclick="clearCase('A')" title="Remove case">✕</button>
+      </div>
+      <div class="suggestions" id="sugA"></div>
+    </div>
+    <div class="search-vs">VS</div>
+    <div class="search-slot slot-b" id="slotB">
+      <label class="lbl-b">Case B</label>
+      <div class="search-input-wrap">
+        <input type="text" id="inputB" placeholder="e.g. NZXT H7 Flow" autocomplete="off"/>
+        <button class="search-btn" onclick="lookupCase('B')">Search</button>
+        <button class="clear-btn" id="clearB" onclick="clearCase('B')" title="Remove case">✕</button>
+      </div>
+      <div class="suggestions" id="sugB"></div>
+    </div>
+    <div class="search-vs">VS</div>
+    <div class="search-slot slot-c" id="slotC">
+      <label class="lbl-c">Case C <span style="font-size:0.5rem;opacity:0.6;">(optional)</span></label>
+      <div class="search-input-wrap">
+        <input type="text" id="inputC" placeholder="Add a third case…" autocomplete="off"/>
+        <button class="search-btn" onclick="lookupCase('C')">Search</button>
+        <button class="clear-btn" id="clearC" onclick="clearCase('C')" title="Remove case">✕</button>
+      </div>
+      <div class="suggestions" id="sugC"></div>
+    </div>
+  </div>
+
+
+  <div class="stage">
+    <div class="stage-header">
+      <div id="deskInputWrap" class="desk-controls">
+        <div class="desk-ctrl">
+          <span class="desk-ctrl-label">Desk Width</span>
+          <div class="desk-ctrl-field">
+            <input type="number" id="deskWidthInput" min="24" max="144" value="52" step="0.5"
+              oninput="onDeskWidthChange(this.value)">
+            <span class="unit">"</span>
+          </div>
+        </div>
+        <div class="desk-ctrl">
+          <span class="desk-ctrl-label">Desk Depth</span>
+          <div class="desk-ctrl-field">
+            <input type="number" id="deskDepthInput" min="12" max="60" value="24" step="0.5"
+              oninput="onDeskDepthChange(this.value)">
+            <span class="unit">"</span>
+          </div>
+        </div>
+        <div class="desk-ctrl">
+          <span class="desk-ctrl-label">Keyboard</span>
+          <div class="desk-ctrl-field">
+            <select id="kbLayoutSelect" onchange="onKbLayoutChange(this.value)">
+              <option value="100">100% Full Size</option>
+              <option value="tkl">TKL (80%)</option>
+              <option value="75">75%</option>
+              <option value="65">65%</option>
+              <option value="60">60%</option>
+            </select>
+          </div>
+        </div>
+        <div class="desk-ctrl">
+          <span class="desk-ctrl-label">Monitor</span>
+          <div class="desk-ctrl-field">
+            <select id="monitorSizeSelect" onchange="onMonitorSizeChange(this.value)">
+              <option value="24">24"</option>
+              <option value="25">25"</option>
+              <option value="27" selected>27"</option>
+              <option value="28">28"</option>
+              <option value="32">32"</option>
+              <option value="34">34" Ultrawide</option>
+              <option value="38">38" Ultrawide</option>
+              <option value="49">49" Super Ultrawide</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="view-toggle">
+        <button class="view-btn active" onclick="setView('desk')"  id="btnDesk">Desk Scene</button>
+        <button class="view-btn"        onclick="setView('iso')"   id="btnIso">Isometric 3D</button>
+        <button class="view-btn"        onclick="setView('both')"  id="btnBoth">Front + Side</button>
+        <button class="view-btn"        onclick="setView('front')" id="btnFront">Front</button>
+        <button class="view-btn"        onclick="setView('side')"  id="btnSide">Side</button>
+      </div>
+    </div>
+    <div class="diagram-wrap" id="diagramWrap">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">⬜</div>
+        <div class="empty-text">Search for a case above to get started</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-grid" id="infoGrid">
+    <div class="info-placeholder" style="min-height:80px">Search for cases above to see comparison</div>
+  </div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const CASES = [
+  // gpu=max GPU length mm, rad=max radiator mm, fans=included fan count, mb=supported MB sizes
+  // ── CORSAIR ───────────────────────────────────────────────────────────────
+  {name:"Corsair 4000D",              brand:"Corsair",        l:453,w:230,h:466, gpu:360, rad:360, fans:1, mb:"ATX/mATX/ITX"},
+  {name:"Corsair 4000D Airflow",      brand:"Corsair",        l:453,w:230,h:466, gpu:360, rad:360, fans:2, mb:"ATX/mATX/ITX"},
+  {name:"Corsair 5000D",              brand:"Corsair",        l:520,w:245,h:520, gpu:420, rad:360, fans:1, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Corsair 5000D Airflow",      brand:"Corsair",        l:520,w:245,h:520, gpu:420, rad:360, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Corsair 7000D Airflow",      brand:"Corsair",        l:627,w:268,h:699, gpu:450, rad:480, fans:4, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Corsair 3000D Airflow",      brand:"Corsair",        l:453,w:230,h:466, gpu:360, rad:360, fans:2, mb:"ATX/mATX/ITX"},
+  {name:"Corsair iCUE 5000X RGB",     brand:"Corsair",        l:520,w:245,h:520, gpu:420, rad:360, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Corsair iCUE 4000X RGB",     brand:"Corsair",        l:453,w:230,h:466, gpu:360, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  // ── HAVN ──────────────────────────────────────────────────────────────────
+  {name:"HAVN HS 420",                brand:"HAVN",           l:541,w:260,h:547, gpu:430, rad:420, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"HAVN HS 420 VGPU",           brand:"HAVN",           l:541,w:260,h:547, gpu:430, rad:420, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"HAVN BF 360",                brand:"HAVN",           l:515,w:254,h:523, gpu:400, rad:360, fans:0, mb:"ATX/mATX/ITX"},
+  {name:"HAVN BF 360 Flow",           brand:"HAVN",           l:515,w:254,h:523, gpu:400, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  // ── FRACTAL DESIGN ────────────────────────────────────────────────────────
+  {name:"Fractal Design Torrent",     brand:"Fractal Design", l:530,w:242,h:530, gpu:461, rad:360, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Fractal Design Torrent Compact",brand:"Fractal Design",l:460,w:220,h:474,gpu:461,rad:240, fans:2, mb:"ATX/mATX/ITX"},
+  {name:"Fractal Design Define 7",    brand:"Fractal Design", l:543,w:240,h:565, gpu:491, rad:420, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Fractal Design Define 7 Compact",brand:"Fractal Design",l:474,w:210,h:475,gpu:491,rad:280,fans:2, mb:"ATX/mATX/ITX"},
+  {name:"Fractal Design Pop Air",     brand:"Fractal Design", l:424,w:210,h:464, gpu:491, rad:280, fans:3, mb:"ATX/mATX/ITX"},
+  {name:"Fractal Design Pop XL",      brand:"Fractal Design", l:512,w:232,h:521, gpu:491, rad:360, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Fractal Design North",       brand:"Fractal Design", l:427,w:221,h:469, gpu:355, rad:280, fans:2, mb:"ATX/mATX/ITX"},
+  {name:"Fractal Design North XL",    brand:"Fractal Design", l:503,w:240,h:509, gpu:420, rad:360, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Fractal Design Meshify C",   brand:"Fractal Design", l:395,w:212,h:440, gpu:315, rad:240, fans:2, mb:"ATX/mATX/ITX"},
+  {name:"Fractal Design Meshify 2",   brand:"Fractal Design", l:540,w:240,h:565, gpu:491, rad:420, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Fractal Design Meshify 2 Compact",brand:"Fractal Design",l:424,w:210,h:464,gpu:491,rad:240,fans:2,mb:"ATX/mATX/ITX"},
+  // ── LIAN LI ───────────────────────────────────────────────────────────────
+  {name:"Lian Li PC-O11 Dynamic",     brand:"Lian Li",        l:446,w:272,h:446, gpu:420, rad:360, fans:0, mb:"ATX/mATX/ITX"},
+  {name:"Lian Li PC-O11 Dynamic EVO", brand:"Lian Li",        l:459,w:285,h:459, gpu:420, rad:360, fans:0, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Lian Li PC-O11 Air",         brand:"Lian Li",        l:426,w:272,h:446, gpu:420, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  {name:"Lian Li Lancool 216",        brand:"Lian Li",        l:480,w:230,h:493, gpu:400, rad:360, fans:2, mb:"ATX/mATX/ITX"},
+  {name:"Lian Li Lancool III",        brand:"Lian Li",        l:494,w:240,h:507, gpu:400, rad:360, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Lian Li Lancool 207",        brand:"Lian Li",        l:432,w:214,h:469, gpu:400, rad:280, fans:2, mb:"ATX/mATX/ITX"},
+  // ── NZXT ──────────────────────────────────────────────────────────────────
+  {name:"NZXT H510",                  brand:"NZXT",           l:428,w:210,h:460, gpu:381, rad:240, fans:2, mb:"ATX/mATX/ITX"},
+  {name:"NZXT H510 Flow",             brand:"NZXT",           l:428,w:210,h:460, gpu:381, rad:240, fans:2, mb:"ATX/mATX/ITX"},
+  {name:"NZXT H710",                  brand:"NZXT",           l:494,w:230,h:516, gpu:413, rad:360, fans:4, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"NZXT H7 Flow",               brand:"NZXT",           l:480,w:230,h:505, gpu:400, rad:360, fans:2, mb:"ATX/mATX/ITX"},
+  {name:"NZXT H9 Flow",               brand:"NZXT",           l:480,w:480,h:494, gpu:435, rad:360, fans:4, mb:"ATX/mATX/ITX"},
+  {name:"NZXT H9 Elite",              brand:"NZXT",           l:480,w:480,h:494, gpu:435, rad:360, fans:4, mb:"ATX/mATX/ITX"},
+  {name:"NZXT H6 Flow",               brand:"NZXT",           l:412,w:193,h:443, gpu:365, rad:240, fans:2, mb:"ATX/mATX/ITX"},
+  // ── BE QUIET! ─────────────────────────────────────────────────────────────
+  {name:"be quiet! Dark Base 700",    brand:"be quiet!",      l:537,w:243,h:585, gpu:430, rad:360, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"be quiet! Dark Base 900",    brand:"be quiet!",      l:567,w:272,h:638, gpu:430, rad:420, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"be quiet! Pure Base 500",    brand:"be quiet!",      l:463,w:232,h:450, gpu:369, rad:360, fans:2, mb:"ATX/mATX/ITX"},
+  {name:"be quiet! Pure Base 500DX",  brand:"be quiet!",      l:463,w:232,h:450, gpu:369, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  {name:"be quiet! Silent Base 802",  brand:"be quiet!",      l:545,w:250,h:572, gpu:430, rad:360, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  // ── PHANTEKS ──────────────────────────────────────────────────────────────
+  {name:"Phanteks Eclipse P500A",     brand:"Phanteks",       l:510,w:240,h:520, gpu:420, rad:360, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Phanteks Eclipse P400A",     brand:"Phanteks",       l:464,w:210,h:465, gpu:400, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  {name:"Phanteks Enthoo Pro II",     brand:"Phanteks",       l:600,w:280,h:650, gpu:503, rad:480, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Phanteks NV7",               brand:"Phanteks",       l:530,w:280,h:590, gpu:503, rad:420, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Phanteks NV5",               brand:"Phanteks",       l:485,w:255,h:536, gpu:435, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  // ── COOLER MASTER ─────────────────────────────────────────────────────────
+  {name:"Cooler Master TD500 Mesh",   brand:"Cooler Master",  l:493,w:217,h:469, gpu:410, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  {name:"Cooler Master HAF 700 Evo",  brand:"Cooler Master",  l:700,w:322,h:690, gpu:490, rad:480, fans:6, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Cooler Master MasterBox 520",brand:"Cooler Master",  l:480,w:211,h:490, gpu:410, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  {name:"Cooler Master NR200P",       brand:"Cooler Master",  l:360,w:185,h:274, gpu:330, rad:240, fans:2, mb:"mATX/ITX"},
+  // ── HYTE ──────────────────────────────────────────────────────────────────
+  {name:"HYTE Y60",                   brand:"HYTE",           l:459,w:347,h:459, gpu:435, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  {name:"HYTE Y70 Touch",             brand:"HYTE",           l:459,w:347,h:459, gpu:435, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  {name:"HYTE Y40",                   brand:"HYTE",           l:390,w:280,h:410, gpu:355, rad:240, fans:2, mb:"mATX/ITX"},
+  // ── THERMALTAKE ───────────────────────────────────────────────────────────
+  {name:"Thermaltake Core P3",        brand:"Thermaltake",    l:512,w:188,h:512, gpu:450, rad:360, fans:0, mb:"ATX/mATX/ITX"},
+  {name:"Thermaltake The Tower 900",  brand:"Thermaltake",    l:670,w:310,h:818, gpu:500, rad:480, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Thermaltake View 71",        brand:"Thermaltake",    l:566,w:286,h:609, gpu:410, rad:420, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  // ── MONTECH ───────────────────────────────────────────────────────────────
+  {name:"Montech King 95 Pro",        brand:"Montech",        l:490,w:230,h:510, gpu:420, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  {name:"Montech Air 903 Max",        brand:"Montech",        l:474,w:216,h:490, gpu:410, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  // ── IN WIN ────────────────────────────────────────────────────────────────
+  {name:"In Win 303",                 brand:"In Win",         l:440,w:210,h:450, gpu:380, rad:240, fans:1, mb:"ATX/mATX/ITX"},
+  {name:"In Win 101",                 brand:"In Win",         l:489,w:215,h:470, gpu:400, rad:360, fans:3, mb:"ATX/mATX/ITX"},
+  // ── ANTEC ─────────────────────────────────────────────────────────────────
+  {name:"Antec P120 Crystal",         brand:"Antec",          l:520,w:242,h:541, gpu:400, rad:360, fans:3, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"Antec Flux Pro",             brand:"Antec",          l:530,w:230,h:515, gpu:410, rad:360, fans:5, mb:"E-ATX/ATX/mATX/ITX"},
+  // ── DEEPCOOL ──────────────────────────────────────────────────────────────
+  {name:"DeepCool CH560",             brand:"DeepCool",       l:504,w:236,h:531, gpu:400, rad:360, fans:4, mb:"E-ATX/ATX/mATX/ITX"},
+  {name:"DeepCool Matrexx 70",        brand:"DeepCool",       l:490,w:240,h:520, gpu:380, rad:360, fans:1, mb:"E-ATX/ATX/mATX/ITX"},
+];
+
+// ── Form factor auto-tag ─────────────────────────────────────────────────
+function formFactor(c){
+  const v=(c.l*c.w*c.h)/1e6;
+  if(v < 20)  return {label:'Mini-ITX',    color:'#00e5cc'};
+  if(v < 35)  return {label:'Micro-ATX',   color:'#00c8ff'};
+  if(v < 60)  return {label:'Mid Tower',   color:'#7b6fff'};
+  if(v < 100) return {label:'Mid-XL Tower',color:'#ff8c42'};
+  return              {label:'Full Tower', color:'#ff3d5a'};
+}
+
+let caseA=null, caseB=null, caseC=null, currentView='desk';
+
+window.onload=()=>{
+  caseA = CASES.find(c=>c.name==='Corsair 4000D Airflow') || CASES[0];
+  caseB = CASES.find(c=>c.name==='Fractal Design North') || CASES[1];
+  caseC = null;
+  document.getElementById('inputA').value=caseA.name;
+  document.getElementById('inputB').value=caseB.name;
+  document.getElementById('inputC').value='';
+  document.getElementById('clearA').classList.add('visible');
+  document.getElementById('clearB').classList.add('visible');
+  setView('desk');
+  render();
+};
+
+['A','B','C'].forEach(s=>{
+  const el = document.getElementById('input'+s);
+  el.addEventListener('focus',  ()=>showSuggestions(s));
+  el.addEventListener('input',  ()=>showSuggestions(s));
+  el.addEventListener('keydown',e=>{
+    if(e.key==='Enter') lookupCase(s);
+    if(e.key==='Escape') closeSug(s);
+  });
+});
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#slotA')) closeSug('A');
+  if(!e.target.closest('#slotB')) closeSug('B');
+  if(!e.target.closest('#slotC')) closeSug('C');
+});
+
+function showSuggestions(s){
+  const v=document.getElementById('input'+s).value.trim().toLowerCase();
+  const el=document.getElementById('sug'+s);
+  let m;
+  if(!v){
+    m = CASES.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  } else {
+    const words = v.split(/\s+/);
+    m=CASES.filter(c=>{
+      const hay = (c.name+' '+c.brand).toLowerCase().replace(/[^a-z0-9 ]/g,'');
+      return words.every(w=>hay.includes(w));
+    }).sort((a,b)=>a.name.localeCompare(b.name)).slice(0,12);
+  }
+  if(!m.length){el.classList.remove('open');return;}
+  el.innerHTML=m.map(c=>`<div class="suggestion-item" onclick="selectCase('${s}','${c.name.replace(/'/g,"\\'")}')"><div class="sug-name">${c.name}</div><div class="sug-dims">${c.l}×${c.w}×${c.h} mm</div></div>`).join('');
+  el.classList.add('open');
+}
+function closeSug(s){document.getElementById('sug'+s).classList.remove('open');}
+function selectCase(s,name){
+  const c=CASES.find(x=>x.name===name);if(!c)return;
+  document.getElementById('input'+s).value=c.name;
+  document.getElementById('clear'+s).classList.add('visible');
+  closeSug(s);
+  if(s==='A')caseA=c;else if(s==='B')caseB=c;else caseC=c;
+  render();
+  // Auto-advance focus: A→B only (C is optional, don't push user there)
+  if(s==='A' && !caseB) setTimeout(()=>document.getElementById('inputB').focus(), 50);
+}
+
+function clearCase(s){
+  document.getElementById('input'+s).value='';
+  document.getElementById('clear'+s).classList.remove('visible');
+  if(s==='A') caseA=null;
+  else if(s==='B') caseB=null;
+  else caseC=null;
+  const hasAny = caseA||caseB||caseC;
+  if(currentView==='desk' && hasAny){
+    render();
+  } else if(!hasAny || s!=='C'){
+    const wrap=document.getElementById('diagramWrap');
+    wrap.innerHTML='<div class="empty-state" id="emptyState"><div class="empty-icon">⬜</div><div class="empty-text">Add a case to see the desk scene</div></div>';
+  } else {
+    render();
+  }
+}
+
+async function lookupCase(s){
+  const v=document.getElementById('input'+s).value.trim();if(!v)return;
+  // allow clearing C slot
+  if(s==='C'&&v===''){caseC=null;render();return;}
+  const local=CASES.find(c=>c.name.toLowerCase()===v.toLowerCase()||c.name.toLowerCase().includes(v.toLowerCase()));
+  if(local){selectCase(s,local.name);return;}
+  setStatus('loading',`Looking up "${v}"…`);
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,
+        messages:[{role:"user",content:`PC case dimensions for "${v}". Return ONLY JSON: {"name":"full name","brand":"brand","l":depth_mm,"w":width_mm,"h":height_mm} or {"error":"not found"}. No other text.`}]})});
+    const data=await res.json();
+    const raw=data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+    const p=JSON.parse(raw);
+    if(p.error){setStatus('err',`Couldn't find "${v}". Try the full model name.`);return;}
+    const nc={name:p.name,brand:p.brand,l:+p.l,w:+p.w,h:+p.h,gpu:null,rad:null,fans:null,mb:null};
+    CASES.push(nc);
+    document.getElementById('input'+s).value=nc.name;
+    if(s==='A')caseA=nc;else if(s==='B')caseB=nc;else caseC=nc;
+    if(caseA&&caseB) render();
+    else setStatus('ok',`Found ${nc.name}. Add the second case.`);
+  }catch(e){setStatus('err','Lookup failed. Try a different name.');}
+}
+
+function setStatus(type,msg){ /* status bar removed */ }
+
+let userDeskWidthIn = 52;  // inches — fits 2 default mid-tower cases
+let userDeskDepthIn = 24;  // inches — default 24"
+let userDeskWidth   = Math.round(userDeskWidthIn * 25.4); // mm
+let userDeskDepth   = Math.round(userDeskDepthIn * 25.4); // mm
+const MONITOR_PRESETS = {
+  24: { ar:[16,9],  label:'24"' },
+  25: { ar:[16,9],  label:'25"' },
+  27: { ar:[16,9],  label:'27"' },
+  28: { ar:[16,9],  label:'28"' },
+  32: { ar:[16,9],  label:'32"' },
+  34: { ar:[21,9],  label:'34" Ultrawide' },
+  38: { ar:[21,9],  label:'38" Ultrawide' },
+  49: { ar:[32,9],  label:'49" Super Ultrawide' },
+};
+
+let userMonitorInches = 27; // diagonal inches — user-configurable
+
+// Convert diagonal inches + aspect ratio to width/height in mm
+function monitorDimsFromInches(inches){
+  const preset = MONITOR_PRESETS[inches];
+  const [aw, ah] = preset ? preset.ar : [16, 9];
+  const diagMm = inches * 25.4;
+  const w = Math.round(diagMm * aw / Math.sqrt(aw*aw + ah*ah));
+  const h = Math.round(diagMm * ah / Math.sqrt(aw*aw + ah*ah));
+  return { w, h };
+}
+
+function monitorLabel(inches){
+  const preset = MONITOR_PRESETS[inches];
+  return preset ? preset.label : `${inches}"`;
+}
+
+function onDeskWidthChange(val){
+  const v = parseFloat(val);
+  if(!isNaN(v) && v >= 24 && v <= 144){
+    userDeskWidthIn = v;
+    userDeskWidth = Math.round(v * 25.4);
+    if(currentView==='desk') render();
+  }
+}
+
+function onDeskDepthChange(val){
+  const v = parseFloat(val);
+  if(!isNaN(v) && v >= 12 && v <= 60){
+    userDeskDepthIn = v;
+    userDeskDepth = Math.round(v * 25.4);
+    if(currentView==='desk') render();
+  }
+}
+
+function onMonitorSizeChange(val){
+  const v = parseFloat(val);
+  if(!isNaN(v) && v >= 18 && v <= 57){
+    userMonitorInches = v;
+    if(currentView==='desk') render();
+  }
+}
+
+// Keyboard layout dimensions (W×H×D in mm, approximate real-world sizes)
+const KB_LAYOUTS = {
+  '100': { label:'100% Full Size', w:450, h:35, d:140 },
+  'tkl': { label:'TKL (80%)',      w:360, h:35, d:135 },
+  '75':  { label:'75%',            w:320, h:35, d:130 },
+  '65':  { label:'65%',            w:305, h:35, d:125 },
+  '60':  { label:'60%',            w:285, h:35, d:100 },
+};
+let userKbLayout = '100';
+
+function onKbLayoutChange(val){
+  if(KB_LAYOUTS[val]){
+    userKbLayout = val;
+    if(currentView==='desk') render();
+  }
+}
+
+function setView(v){
+  currentView=v;
+  ['Iso','Desk','Both','Front','Side'].forEach(x=>document.getElementById('btn'+x).classList.toggle('active',x.toLowerCase()===v));
+  document.getElementById('deskInputWrap').style.display = v==='desk' ? 'flex' : 'none';
+  render();
+}
+
+// ── Main render ───────────────────────────────────────────────────────────
+function render(){
+  const filled = [caseA, caseB, caseC].filter(Boolean);
+  if(!filled.length) return;
+
+  const wrap=document.getElementById('diagramWrap');
+  const es=document.getElementById('emptyState');if(es)es.remove();
+  wrap.innerHTML='';
+
+  if(currentView==='desk'){
+    renderDesk(wrap, caseA, caseB, caseC);
+  } else {
+    if(filled.length < 2){
+      wrap.innerHTML='<div class="empty-state" id="emptyState"><div class="empty-icon">⬜</div><div class="empty-text">Add a second case to compare, or switch to Desk Scene</div></div>';
+    } else {
+      if(currentView==='iso') renderIso(wrap,caseA,caseB,caseC);
+      else renderSVG(wrap,caseA,caseB,currentView,caseC);
+    }
+  }
+  renderInfo(caseA,caseB,caseC);
+}
+
+// ── 3D ROTATION STATE ─────────────────────────────────────────────────────
+// Default: top-right view = yaw ~-40°, pitch ~25°
+const DEFAULT_YAW   =  0.72;
+const DEFAULT_PITCH = -0.44;
+const DEFAULT_ZOOM  =  1.0;
+const MIN_ZOOM = 0.35;
+const MAX_ZOOM = 3.5;
+let rotYaw   = DEFAULT_YAW;
+let rotPitch = DEFAULT_PITCH;
+let zoomLevel = DEFAULT_ZOOM;
+let isoCanvas = null;
+
+function resetRotation(){
+  rotYaw=DEFAULT_YAW; rotPitch=DEFAULT_PITCH; zoomLevel=DEFAULT_ZOOM;
+  if(isoCanvas && caseA && caseB) redrawIso();
+}
+function adjustZoom(delta){
+  zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel * delta));
+  if(isoCanvas && caseA && caseB) redrawIso();
+}
+
+// ── 3D MATH ───────────────────────────────────────────────────────────────
+function rotatePoint(x,y,z,yaw,pitch){
+  // yaw: rotate around Y axis
+  let rx = x*Math.cos(yaw)  + z*Math.sin(yaw);
+  let ry = y;
+  let rz = -x*Math.sin(yaw) + z*Math.cos(yaw);
+  // pitch: rotate around X axis
+  let fx = rx;
+  let fy = ry*Math.cos(pitch) - rz*Math.sin(pitch);
+  let fz = ry*Math.sin(pitch) + rz*Math.cos(pitch);
+  return {x:fx, y:fy, z:fz};
+}
+
+// Orthographic project to screen (no perspective distortion)
+function project(p3, cx, cy, scale){
+  return { x: cx + p3.x * scale, y: cy - p3.y * scale };
+}
+
+// Get all 8 rotated+projected vertices of a box centered at origin
+function boxVerts(c, S, yaw, pitch, cx, cy){
+  // Box: width=c.w (X), height=c.h (Y), depth=c.l (Z)
+  // Centered at origin
+  const hw=c.w*S/2, hh=c.h*S/2, hd=c.l*S/2;
+  const corners=[
+    [-hw,-hh,-hd],[ hw,-hh,-hd],[ hw,-hh, hd],[-hw,-hh, hd], // bottom
+    [-hw, hh,-hd],[ hw, hh,-hd],[ hw, hh, hd],[-hw, hh, hd], // top
+  ];
+  return corners.map(([x,y,z])=>{
+    const r=rotatePoint(x,y,z,yaw,pitch);
+    return { s: project(r,cx,cy,1), z: r.z };
+  });
+}
+
+function lerp(a,b,t){return a+(b-a)*t;}
+function lerp2(a,b,t){return {x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t)};}
+
+function hexRgb(hex){
+  return [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)];
+}
+function rgba(hex,a){ const [r,g,b]=hexRgb(hex); return `rgba(${r},${g},${b},${a})`; }
+
+// ── ISOMETRIC 3D ─────────────────────────────────────────────────────────
+let redrawIso = ()=>{};
+
+function renderIso(wrap,a,b,c){
+  
+  const DPR=Math.min(window.devicePixelRatio||1,2);
+  const CW=Math.min(wrap.offsetWidth||1150,1150);
+  const CH=Math.round(CW*0.54);
+
+  const cv=document.createElement('canvas');
+  cv.className='iso-canvas';
+  cv.width=CW*DPR; cv.height=CH*DPR;
+  cv.style.width=CW+'px'; cv.style.height=CH+'px';
+  wrap.appendChild(cv);
+  isoCanvas=cv;
+
+  // Controls row
+  const ctrlRow=document.createElement('div');
+  ctrlRow.className='iso-controls';
+  ctrlRow.innerHTML=`
+    <button class="reset-btn" onclick="resetRotation()">↺ Reset View</button>
+    <button class="reset-btn" onclick="adjustZoom(1.25)">️ Zoom In</button>
+    <button class="reset-btn" onclick="adjustZoom(0.8)">️ Zoom Out</button>
+    <span class="iso-hint">Drag to rotate · Scroll or pinch to zoom</span>`;
+  wrap.appendChild(ctrlRow);
+
+  const ctx=cv.getContext('2d');
+
+  function draw(){
+    ctx.save();
+    ctx.scale(DPR,DPR);
+    ctx.clearRect(0,0,CW,CH);
+    ctx.fillStyle='#080b0e';
+    ctx.fillRect(0,0,CW,CH);
+
+    const slots = [a,b,c];  // slot 0=A(blue), 1=B(orange), 2=C(purple) — nulls preserved
+    const colors = ['#00c8ff','#ff6a1a','#7b6fff'];
+    const present = slots.map((cas,i)=>cas ? {cas,i} : null).filter(Boolean);
+
+    const maxDim = Math.max(...present.flatMap(({cas})=>[cas.l,cas.w,cas.h]));
+    const S=(Math.min(CW,CH)*0.30)/maxDim * zoomLevel;
+
+    const n = present.length;
+    const spread = n===3 ? 0.28 : 0.22;
+    const cxs = present.map((_,pi) => CW*(0.5 + (pi-(n-1)/2)*spread/Math.max(1,zoomLevel*0.6)));
+
+    present.forEach(({cas},pi) => drawFloorDots(ctx,CW,CH,S,cas,cxs[pi],CH*0.54));
+    present.forEach(({cas,i},pi) => draw3DBox(ctx,cas,S,cxs[pi],CH*0.54,colors[i],rotYaw,rotPitch));
+    present.forEach(({cas,i},pi) => drawLabel3D(ctx,cas,S,cxs[pi],CH*0.54,colors[i],rotYaw,rotPitch));
+
+    // VS labels between adjacent present cases
+    const vsAlpha=Math.max(0, 1-(zoomLevel-1.3)*2.5);
+    if(vsAlpha>0.01){
+      ctx.font='bold 18px Rajdhani,sans-serif';
+      ctx.fillStyle=`rgba(36,48,64,${vsAlpha*0.9})`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      for(let pi=0;pi<present.length-1;pi++){
+        ctx.fillText('VS',(cxs[pi]+cxs[pi+1])/2,CH*0.5);
+      }
+    }
+
+    ctx.font='10px IBM Plex Mono,monospace';
+    ctx.fillStyle='rgba(78,94,114,0.65)';
+    ctx.textAlign='right'; ctx.textBaseline='top';
+    ctx.fillText(`${Math.round(zoomLevel*100)}%`, CW-10, 8);
+    ctx.restore();
+  }
+
+  redrawIso=draw;
+  draw();
+
+  // ── Drag rotation ──
+  let dragging=false, lastX=0, lastY=0;
+  // ── Pinch zoom tracking ──
+  let lastPinchDist=null;
+
+  function startDrag(x,y){ dragging=true; lastX=x; lastY=y; cv.classList.add('dragging'); }
+  function moveDrag(x,y){
+    if(!dragging)return;
+    const dx=x-lastX, dy=y-lastY;
+    rotYaw   -= dx*0.008;
+    rotPitch -= dy*0.008;
+    rotPitch=Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, rotPitch));
+    lastX=x; lastY=y;
+    draw();
+  }
+  function endDrag(){ dragging=false; cv.classList.remove('dragging'); }
+
+  // Mouse drag
+  cv.addEventListener('mousedown', e=>{ e.preventDefault(); startDrag(e.clientX,e.clientY); });
+  window.addEventListener('mousemove', e=>moveDrag(e.clientX,e.clientY));
+  window.addEventListener('mouseup', endDrag);
+
+  // Mouse wheel zoom — smooth, centered
+  cv.addEventListener('wheel', e=>{
+    e.preventDefault();
+    // deltaY negative = scroll up = zoom in
+    const factor = e.deltaY < 0 ? 1.08 : 0.926;
+    zoomLevel=Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel*factor));
+    draw();
+  }, {passive:false});
+
+  // Touch start: track 1-finger drag or 2-finger pinch start
+  cv.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if(e.touches.length===1){
+      startDrag(e.touches[0].clientX, e.touches[0].clientY);
+      lastPinchDist=null;
+    } else if(e.touches.length===2){
+      dragging=false; cv.classList.remove('dragging');
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      lastPinchDist=Math.hypot(dx,dy);
+    }
+  },{passive:false});
+
+  // Touch move: 1-finger rotate, 2-finger pinch zoom
+  cv.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    if(e.touches.length===1 && lastPinchDist===null){
+      moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+    } else if(e.touches.length===2){
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      const dist=Math.hypot(dx,dy);
+      if(lastPinchDist!==null && dist>0){
+        zoomLevel=Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel*(dist/lastPinchDist)));
+        draw();
+      }
+      lastPinchDist=dist;
+    }
+  },{passive:false});
+
+  cv.addEventListener('touchend', e=>{
+    if(e.touches.length<2) lastPinchDist=null;
+    if(e.touches.length===0) endDrag();
+  });
+}
+function drawFloorDots(ctx,CW,CH,S,c,cx,cy){
+  // subtle dot grid shadow under the box footprint
+  const hw=c.w*S/2, hd=c.l*S/2;
+  ctx.save();
+  ctx.globalAlpha=0.08;
+  for(let i=-3;i<=3;i++){
+    for(let j=-3;j<=3;j++){
+      const r=rotatePoint(i*(hw/2.5),-(c.h*S/2)-4,j*(hd/2.5),rotYaw,rotPitch);
+      const sp=project(r,cx,cy,1);
+      ctx.fillStyle='#aaa';
+      ctx.beginPath(); ctx.arc(sp.x,sp.y,1.2,0,Math.PI*2); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+
+// ── SIMPLE 3D BOX ────────────────────────────────────────────────────────
+function draw3DBox(ctx,c,S,cx,cy,color,yaw,pitch){
+  const hw=c.w*S/2, hh=c.h*S/2, hd=c.l*S/2;
+  const corners=[
+    [-hw,-hh,-hd],[ hw,-hh,-hd],[ hw,-hh, hd],[-hw,-hh, hd],
+    [-hw, hh,-hd],[ hw, hh,-hd],[ hw, hh, hd],[-hw, hh, hd],
+  ];
+  function proj(x,y,z){ const r=rotatePoint(x,y,z,yaw,pitch); return project(r,cx,cy,1); }
+  const v=corners.map(([x,y,z])=>proj(x,y,z));
+
+  const lightDir={x:0.6,y:1.0,z:-0.5};
+  const lLen=Math.hypot(lightDir.x,lightDir.y,lightDir.z);
+  function faceLight(nx,ny,nz){
+    const rn=rotatePoint(nx,ny,nz,yaw,pitch);
+    return Math.max(0,(rn.x*lightDir.x+rn.y*lightDir.y+rn.z*lightDir.z)/lLen);
+  }
+  function faceVisible(nx,ny,nz){
+    return rotatePoint(nx,ny,nz,yaw,pitch).z < 0.1;
+  }
+  function faceDepth(idxArr){
+    return idxArr.reduce((s,i)=>{ const r=rotatePoint(...corners[i],yaw,pitch); return s+r.z; },0)/idxArr.length;
+  }
+
+  const faces=[
+    {idx:[0,1,5,4], norm:[0,0,-1]},
+    {idx:[2,3,7,6], norm:[0,0, 1]},
+    {idx:[1,2,6,5], norm:[ 1,0,0]},
+    {idx:[3,0,4,7], norm:[-1,0,0]},
+    {idx:[4,5,6,7], norm:[0, 1,0]},
+    {idx:[0,3,2,1], norm:[0,-1,0]},
+  ].map(f=>({...f,
+    depth: faceDepth(f.idx),
+    vis:   faceVisible(...f.norm),
+    light: faceLight(...f.norm),
+    pts:   f.idx.map(i=>v[i]),
+  })).sort((a,b)=>b.depth-a.depth);
+
+  const [cr,cg,cb]=hexRgb(color);
+
+  for(const f of faces){
+    if(!f.vis) continue;
+    const bright = 0.12 + f.light * 0.88;
+    const {pts} = f;
+    ctx.save();
+    ctx.beginPath();
+    pts.forEach((p,i)=> i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+    ctx.closePath();
+    // face fill with subtle gradient
+    try{
+      const g=ctx.createLinearGradient(pts[0].x,pts[0].y,pts[2].x,pts[2].y);
+      g.addColorStop(0, `rgba(${cr},${cg},${cb},${bright*0.32})`);
+      g.addColorStop(1, `rgba(${cr},${cg},${cb},${bright*0.18})`);
+      ctx.fillStyle=g;
+    }catch(e){ ctx.fillStyle=`rgba(${cr},${cg},${cb},${bright*0.25})`; }
+    ctx.fill();
+    ctx.strokeStyle=`rgba(${cr},${cg},${cb},${0.35+bright*0.55})`;
+    ctx.lineWidth=1.2;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawDims3D(ctx,c,S,cx,cy,color,yaw,pitch);
+}
+
+function drawDims3D(ctx,c,S,cx,cy,color,yaw,pitch){
+  const hw=c.w*S/2, hh=c.h*S/2, hd=c.l*S/2;
+  function proj(x,y,z){ const r=rotatePoint(x,y,z,yaw,pitch); return project(r,cx,cy,1); }
+  const wa=[proj(-hw,-hh,-hd), proj( hw,-hh,-hd)];
+  const da=[proj( hw,-hh,-hd), proj( hw,-hh, hd)];
+  const ha=[proj( hw,-hh,-hd), proj( hw, hh,-hd)];
+  const dim3Arrow=(p1,p2,lbl)=>{
+    const dx=p2.x-p1.x, dy=p2.y-p1.y;
+    const len=Math.hypot(dx,dy); if(len<10)return;
+    const nx=-dy/len, ny=dx/len, off=10;
+    const f={x:p1.x+nx*off,y:p1.y+ny*off};
+    const t={x:p2.x+nx*off,y:p2.y+ny*off};
+    const mid={x:(f.x+t.x)/2,y:(f.y+t.y)/2};
+    ctx.save();
+    ctx.globalAlpha=0.7; ctx.strokeStyle=color; ctx.lineWidth=0.9;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.lineTo(t.x,t.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(p1.x+nx*(off-4),p1.y+ny*(off-4)); ctx.lineTo(p1.x+nx*(off+4),p1.y+ny*(off+4));
+    ctx.moveTo(p2.x+nx*(off-4),p2.y+ny*(off-4)); ctx.lineTo(p2.x+nx*(off+4),p2.y+ny*(off+4));
+    ctx.stroke();
+    ctx.globalAlpha=0.9; ctx.font='bold 8.5px IBM Plex Mono,monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    const tw=ctx.measureText(lbl).width;
+    ctx.fillStyle='rgba(8,11,14,0.75)'; ctx.fillRect(mid.x-tw/2-2,mid.y-6,tw+4,12);
+    ctx.fillStyle=color; ctx.fillText(lbl,mid.x,mid.y);
+    ctx.restore();
+  };
+  dim3Arrow(wa[0],wa[1],`W: ${c.w}mm`);
+  dim3Arrow(da[0],da[1],`L: ${c.l}mm`);
+  dim3Arrow(ha[0],ha[1],`H: ${c.h}mm`);
+}
+
+function drawLabel3D(ctx,c,S,cx,cy,color,yaw,pitch){
+  const hh=c.h*S/2;
+  const r=rotatePoint(0,-hh-18,0,yaw,pitch);
+  const sp=project(r,cx,cy,1);
+  ctx.save();
+  ctx.font='bold 12px Rajdhani,sans-serif';
+  ctx.fillStyle=color; ctx.textAlign='center'; ctx.globalAlpha=0.92;
+  ctx.fillText(c.name.toUpperCase(),sp.x,sp.y+hh*0.8+22);
+  ctx.restore();
+}
+
+function drawFeet(ctx,c,S,cx,cy,yaw,pitch,color){
+  const hw=c.w*S/2, hh=c.h*S/2, hd=c.l*S/2, footH=S*8;
+  const feetPos=[[-hw*0.75,-hh,-hd*0.8],[hw*0.75,-hh,-hd*0.8],[-hw*0.75,-hh,hd*0.8],[hw*0.75,-hh,hd*0.8]];
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.globalAlpha=0.5;
+  for(const [fx,fy,fz] of feetPos){
+    const tp=project(rotatePoint(fx,fy,fz,yaw,pitch),cx,cy,1);
+    const bp=project(rotatePoint(fx,fy-footH,fz,yaw,pitch),cx,cy,1);
+    ctx.beginPath(); ctx.moveTo(tp.x,tp.y); ctx.lineTo(bp.x,bp.y); ctx.stroke();
+    ctx.fillStyle=color; ctx.globalAlpha=0.45;
+    ctx.beginPath(); ctx.arc(bp.x,bp.y,2,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+
+
+// ── DESK SCENE ────────────────────────────────────────────────────────────
+// Reference objects (real dimensions in mm):
+// ── DESK SCENE STATE ─────────────────────────────────────────────────────
+const DESK_DEFAULT_YAW   =  0.58;
+const DESK_DEFAULT_PITCH = -0.40;
+const DESK_DEFAULT_ZOOM  =  1.0;
+let deskYaw   = DESK_DEFAULT_YAW;
+let deskPitch = DESK_DEFAULT_PITCH;
+let deskZoom  = DESK_DEFAULT_ZOOM;
+let deskCanvas = null;
+let redrawDesk = ()=>{};
+
+function resetDeskView(){
+  deskYaw=DESK_DEFAULT_YAW; deskPitch=DESK_DEFAULT_PITCH; deskZoom=DESK_DEFAULT_ZOOM;
+  redrawDesk();
+}
+function adjustDeskZoom(delta){
+  deskZoom=Math.max(0.3,Math.min(4.0,deskZoom*delta));
+  redrawDesk();
+}
+
+// ── DESK SCENE RENDERER ───────────────────────────────────────────────────
+function renderDesk(wrap, a, b, c){
+  
+
+  const DPR = Math.min(window.devicePixelRatio||1,2);
+  const CW  = Math.min(wrap.offsetWidth||1150,1150);
+  const CH  = Math.round(CW * 0.62);
+
+  const cv = document.createElement('canvas');
+  cv.className = 'iso-canvas';
+  cv.width = CW*DPR; cv.height = CH*DPR;
+  cv.style.width = CW+'px'; cv.style.height = CH+'px';
+  wrap.appendChild(cv);
+  deskCanvas = cv;
+
+  // Controls
+  const ctrlRow = document.createElement('div');
+  ctrlRow.className = 'iso-controls';
+  ctrlRow.innerHTML = `
+    <button class="reset-btn" onclick="resetDeskView()">↺ Reset View</button>
+    <button class="reset-btn" onclick="adjustDeskZoom(1.25)">＋ Zoom In</button>
+    <button class="reset-btn" onclick="adjustDeskZoom(0.8)">－ Zoom Out</button>
+    <span class="iso-hint">Drag to rotate · Scroll or pinch to zoom</span>`;
+  wrap.appendChild(ctrlRow);
+
+  const ctx = cv.getContext('2d');
+
+  // ── World layout (all in mm, Y is up) ──────────────────────────────────
+  // Desk surface: Z=0 is front edge, Z=+depth is back. X=0 is centre.
+  // Monitor: back-centre. Keyboard: front-centre. Mouse: right of keyboard.
+  // PC Cases: flanking the monitor, sitting on desk.
+
+  // Base scale so desk (~1800mm wide) fits the canvas well at zoom=1
+  // We compute this inside draw() so zoom updates it
+
+  // Scene objects: { wx, wy_bot, wz, W, H, D, colorTop, colorFront, colorRight, stroke, label, dims }
+  // wx=centre-x, wy_bot=bottom Y, wz=centre-z
+
+  // ── World layout ──────────────────────────────────────────────────────
+  // Simple 2D top-down world then we use rotatePoint for 3D projection.
+  // X = left/right (positive = right)
+  // Y = up (positive = up); desk surface top = Y_DESK_TOP
+  // Z = depth (positive = away from camera / "back of desk")
+  //
+  // The camera always looks from front-left-above.
+  // Default deskYaw=-0.58 means camera is left-of-centre looking right.
+  // Default deskPitch=0.40 means looking slightly down.
+  //
+  // DESK: centred at X=0, Z=DESK_D/2 (so front edge is Z=0, back edge Z=DESK_D)
+  // All objects sit on top of the desk. wy_bot = Y_DESK_TOP for anything on the desk.
+
+  const DESK_W = userDeskWidth; // mm wide — user configurable (from inches)
+  const DESK_D = userDeskDepth; // mm deep — user configurable (from inches)
+  const DESK_H = 30;     // thickness of desk slab
+  const LEG_H  = 680;    // leg height below desk
+  const Y_DESK_TOP = 0;  // world Y of desk top surface — all objects start here
+
+  // Desk centre in Z: objects at Z=DESK_D*0.15 are near front, Z=DESK_D*0.85 near back
+  const Z_FRONT = DESK_D * 0.12;   // keyboard / mouse row
+  const Z_MID   = DESK_D * 0.45;   // cases row
+  const Z_BACK  = DESK_D * 0.80;   // monitor row
+
+  // ── Layout: centre the whole scene (monitor + cases) on the desk ──────
+  // Monitor dimensions computed from user-specified diagonal size (16:9)
+  const { w: MON_W, h: MON_H } = monitorDimsFromInches(userMonitorInches);
+  const MON_D = 30;
+  const CASE_GAP = 25;
+  // Cases sit to the RIGHT of the monitor — compute right edge based on which cases are present
+  const _CASE_A_REL = MON_W/2 + a.w/2 + CASE_GAP;
+  const _CASE_B_REL = b ? (_CASE_A_REL + a.w/2 + CASE_GAP + b.w/2) : _CASE_A_REL;
+  const _CASE_C_REL = (b && c) ? (_CASE_B_REL + b.w/2 + CASE_GAP + c.w/2)
+                    : (!b && c) ? (_CASE_A_REL + a.w/2 + CASE_GAP + c.w/2)
+                    : _CASE_B_REL;
+  const _rightEdge = (b && c) ? (_CASE_C_REL + c.w/2)
+                   : b         ? (_CASE_B_REL + b.w/2)
+                   : c         ? (_CASE_C_REL + c.w/2)
+                   :             (_CASE_A_REL + a.w/2);
+  const _leftEdge  = -MON_W/2;
+  const SCENE_OFFSET_X = -(_leftEdge + _rightEdge) / 2;
+
+  const MON_X  = 0 + SCENE_OFFSET_X;
+  const MON_Z  = Z_BACK;
+  // Stand scales with monitor size
+  const MON_BASE_W=Math.round(MON_W*0.36), MON_BASE_H=14, MON_BASE_D=Math.round(MON_W*0.36);
+  const MON_NECK_W=Math.round(MON_W*0.13), MON_NECK_H=Math.round(MON_H*0.36), MON_NECK_D=Math.round(MON_W*0.13);
+
+  // Keyboard: slightly left of content centre, front row
+  const KB_W = KB_LAYOUTS[userKbLayout].w;
+  const KB_H = 35;
+  const KB_D = KB_LAYOUTS[userKbLayout].d;
+  const KB_X = SCENE_OFFSET_X - 60, KB_Z = Z_FRONT;
+
+  // Mouse: immediately right of keyboard
+  const MO_W=70, MO_H=38, MO_D=125;
+  const MO_X = KB_X + KB_W/2 + MO_W/2 + 40;
+  const MO_Z = Z_FRONT;
+
+  // Cases: right of monitor, using offset
+  const CASE_A_X = MON_X + MON_W/2 + a.w/2 + CASE_GAP;
+  const CASE_B_X = b ? (CASE_A_X + a.w/2 + CASE_GAP + b.w/2) : null;
+  const CASE_C_X = (b && c) ? (CASE_B_X + b.w/2 + CASE_GAP + c.w/2)
+                 : (!b && c) ? (CASE_A_X + a.w/2 + CASE_GAP + c.w/2)
+                 : null;
+  const CASE_Z   = Z_MID;
+
+  function draw(){
+    ctx.save();
+    ctx.scale(DPR,DPR);
+    ctx.clearRect(0,0,CW,CH);
+
+    // Scale: fit desk comfortably — account for 3D projection spread at this pitch
+    const S = (CW * 0.55 / DESK_W) * deskZoom;
+
+    // Screen anchor: shift down so the projected desk fits vertically
+    const GX = CW * 0.42;
+    const GY = CH * 0.52;
+
+    function proj(wx, wy, wz){
+      // Shift so desk centre is world origin for rotation
+      const rx = wx;
+      const ry = wy;
+      const rz = wz - DESK_D/2;   // centre Z around 0
+      const r = rotatePoint(rx*S, ry*S, rz*S, deskYaw, deskPitch);
+      return { x: GX + r.x, y: GY - r.y };
+    }
+
+    // ── Background ────────────────────────────────────────────────────
+    ctx.fillStyle='#080b0e';
+    ctx.fillRect(0,0,CW,CH);
+    try{
+      const wg=ctx.createLinearGradient(0,0,0,CH*0.5);
+      wg.addColorStop(0,'#0d1219'); wg.addColorStop(1,'#080b0e');
+      ctx.fillStyle=wg; ctx.fillRect(0,0,CW,CH*0.5);
+    }catch(e_){}
+
+    // ── Collect all faces for global painter's sort ───────────────────
+    const allFaces = [];
+
+    // Add a box: wx,wy_bot,wz are the bottom-centre position.
+    // W=width(X), H=height(Y), D=depth(Z).
+    function addBox(wx, wy_bot, wz, W, H, D,
+                    cTop, cFront, cSide, cStroke, labelObj){
+      const hw=W/2, hh=H, hd=D/2;
+      const C = [
+        // bottom ring (y=wy_bot)
+        [wx-hw, wy_bot,   wz-hd],  // 0 front-left
+        [wx+hw, wy_bot,   wz-hd],  // 1 front-right
+        [wx+hw, wy_bot,   wz+hd],  // 2 back-right
+        [wx-hw, wy_bot,   wz+hd],  // 3 back-left
+        // top ring (y=wy_bot+H)
+        [wx-hw, wy_bot+H, wz-hd],  // 4 front-left-top
+        [wx+hw, wy_bot+H, wz-hd],  // 5 front-right-top
+        [wx+hw, wy_bot+H, wz+hd],  // 6 back-right-top
+        [wx-hw, wy_bot+H, wz+hd],  // 7 back-left-top
+      ];
+
+      const faceDefs = [
+        { idx:[4,5,6,7], norm:[0, 1, 0], fill:cTop   }, // top
+        { idx:[0,1,5,4], norm:[0, 0,-1], fill:cFront  }, // front face (low Z)
+        { idx:[2,3,7,6], norm:[0, 0, 1], fill:cFront  }, // back face
+        { idx:[1,2,6,5], norm:[ 1,0, 0], fill:cSide   }, // right
+        { idx:[3,0,4,7], norm:[-1,0, 0], fill:cSide   }, // left
+        { idx:[3,2,1,0], norm:[0,-1, 0], fill:cTop    }, // bottom
+      ];
+
+      let usedLabel = labelObj;
+      for(const fd of faceDefs){
+        // Back-face cull based on current rotation
+        const rn = rotatePoint(fd.norm[0], fd.norm[1], fd.norm[2], deskYaw, deskPitch);
+        if(rn.z >= 0.05) continue;
+
+        // Depth: average rotated Z of face corners
+        const avgRZ = fd.idx.reduce((sum, i) => {
+          const r = rotatePoint(C[i][0]*S, C[i][1]*S, (C[i][2]-DESK_D/2)*S, deskYaw, deskPitch);
+          return sum + r.z;
+        }, 0) / fd.idx.length;
+
+        allFaces.push({
+          pts:    fd.idx.map(i => C[i]),
+          fill:   fd.fill,
+          stroke: cStroke,
+          lw:     0.8,
+          alpha:  1,
+          avgRZ,
+          label:  usedLabel,
+        });
+        usedLabel = null; // only attach label to first visible face
+      }
+    }
+
+    // Add a flat quad (world coords, 4 pts). Useful for screen details.
+    function addQuad(pts3, fill, stroke, lw=0.6, alpha=0.9){
+      if(pts3.length < 3) return;
+      // Simple normal from first 3 pts
+      const [A,B,Cv] = pts3;
+      const u=[B[0]-A[0],B[1]-A[1],B[2]-A[2]];
+      const v=[Cv[0]-A[0],Cv[1]-A[1],Cv[2]-A[2]];
+      const nx=u[1]*v[2]-u[2]*v[1], ny=u[2]*v[0]-u[0]*v[2], nz=u[0]*v[1]-u[1]*v[0];
+      const rn = rotatePoint(nx,ny,nz, deskYaw, deskPitch);
+      if(rn.z >= 0.1) return;
+      const avgRZ = pts3.reduce((sum,p)=>{
+        const r=rotatePoint(p[0]*S,p[1]*S,(p[2]-DESK_D/2)*S,deskYaw,deskPitch);
+        return sum+r.z;
+      },0)/pts3.length;
+      allFaces.push({ pts:pts3, fill, stroke, lw, alpha, avgRZ, label:null });
+    }
+
+    // ── DESK SLAB ─────────────────────────────────────────────────────
+    // wy_bot = -DESK_H so desk top = Y=0 = Y_DESK_TOP
+    addBox(0, -DESK_H, DESK_D/2,  DESK_W, DESK_H, DESK_D,
+      '#3d2e1e','#2a1e10','#22180c','#6b4e2e', null);
+
+    // Desk grain lines on top
+    for(let i=0;i<18;i++){
+      const t=(i+0.5)/18;
+      const gx = -DESK_W/2 + DESK_W*t;
+      addQuad([
+        [gx-2, Y_DESK_TOP, 0],
+        [gx+2, Y_DESK_TOP, 0],
+        [gx+2, Y_DESK_TOP, DESK_D],
+        [gx-2, Y_DESK_TOP, DESK_D],
+      ], 'rgba(80,50,20,0.18)', null, 0, 0.9);
+    }
+
+    // Legs (4 corners)
+    for(const [lx,lz] of [
+      [-DESK_W/2+70, 60], [DESK_W/2-70, 60],
+      [-DESK_W/2+70, DESK_D-60], [DESK_W/2-70, DESK_D-60]
+    ]){
+      addBox(lx, -DESK_H-LEG_H, lz, 55, LEG_H, 55,
+        '#2a1e10','#1e150a','#1a1208','#4a3018', null);
+    }
+
+    // ── MONITOR ───────────────────────────────────────────────────────
+    // Stand base
+    addBox(MON_X, Y_DESK_TOP, MON_Z,
+      MON_BASE_W, MON_BASE_H, MON_BASE_D,
+      '#3a4258','#2e3448','#272e42','#6070a0', null);
+    // Stand neck
+    addBox(MON_X, Y_DESK_TOP+MON_BASE_H, MON_Z,
+      MON_NECK_W, MON_NECK_H, MON_NECK_D,
+      '#343c58','#2a3250','#242c48','#6070a0', null);
+    // Bezel
+    const BODY_Y = Y_DESK_TOP + MON_BASE_H + MON_NECK_H;
+    addBox(MON_X, BODY_Y, MON_Z, MON_W, MON_H, MON_D,
+      '#2e3f5e','#22324e','#1e2e48','#5080a0',
+      { label:`${monitorLabel(userMonitorInches)} Monitor`, dims:`${MON_W}×${MON_H}×${MON_D}mm` });
+    // Screen (front face of bezel, inset)
+    const SP=14;
+    const SY1=BODY_Y+SP, SY2=BODY_Y+MON_H-SP;
+    const SX1=MON_X-MON_W/2+SP, SX2=MON_X+MON_W/2-SP;
+    const SZ = MON_Z - MON_D/2 - 1;
+    addQuad([[SX1,SY1,SZ],[SX2,SY1,SZ],[SX2,SY2,SZ],[SX1,SY2,SZ]],
+      '#0d2040','#2860cc',0.8,1.0);
+    // Screen scanlines
+    for(let i=1;i<6;i++){
+      const sy = SY1+(SY2-SY1)*i/6;
+      addQuad([[SX1,sy,SZ],[SX2,sy,SZ],[SX2,sy+3,SZ],[SX1,sy+3,SZ]],
+        'rgba(40,100,200,0.25)',null,0,1.0);
+    }
+
+    // ── KEYBOARD ──────────────────────────────────────────────────────
+    addBox(KB_X, Y_DESK_TOP, KB_Z, KB_W, KB_H, KB_D,
+      '#52596c','#404858','#383f50','#8090a8',
+      { label:'Keyboard', dims:`${KB_W}×${KB_H}×${KB_D}mm` });
+    // Keycap grid
+    const KC=14, KR=5;
+    const kw2=(KB_W/KC)-3, kd3=(KB_D/KR)-3;
+    for(let r=0;r<KR;r++) for(let c=0;c<KC;c++){
+      const kx = KB_X - KB_W/2 + (c+0.5)*(KB_W/KC);
+      const kz = KB_Z - KB_D/2 + (r+0.5)*(KB_D/KR);
+      addQuad([
+        [kx-kw2/2, Y_DESK_TOP+KB_H+0.5, kz-kd3/2],
+        [kx+kw2/2, Y_DESK_TOP+KB_H+0.5, kz-kd3/2],
+        [kx+kw2/2, Y_DESK_TOP+KB_H+0.5, kz+kd3/2],
+        [kx-kw2/2, Y_DESK_TOP+KB_H+0.5, kz+kd3/2],
+      ], '#7a8496','#a0aabb',0.5,1.0);
+    }
+
+    // ── MOUSE ─────────────────────────────────────────────────────────
+    addBox(MO_X, Y_DESK_TOP, MO_Z, MO_W, MO_H, MO_D,
+      '#606470','#4e5460','#464c58','#909aaa',
+      { label:'Mouse', dims:`${MO_W}×${MO_H}×${MO_D}mm` });
+    // Scroll wheel
+    addQuad([
+      [MO_X-5, Y_DESK_TOP+MO_H+0.5, MO_Z-12],
+      [MO_X+5, Y_DESK_TOP+MO_H+0.5, MO_Z-12],
+      [MO_X+5, Y_DESK_TOP+MO_H+0.5, MO_Z+12],
+      [MO_X-5, Y_DESK_TOP+MO_H+0.5, MO_Z+12],
+    ], '#888fa0','#b0bac8',0.6,1.0);
+    // Click split line
+    addQuad([
+      [MO_X, Y_DESK_TOP+MO_H+0.5, MO_Z-MO_D/2+5],
+      [MO_X+1, Y_DESK_TOP+MO_H+0.5, MO_Z-MO_D/2+5],
+      [MO_X+1, Y_DESK_TOP+MO_H+0.5, MO_Z+MO_D*0.2],
+      [MO_X, Y_DESK_TOP+MO_H+0.5, MO_Z+MO_D*0.2],
+    ], '#38404e','#606878',0.5,1.0);
+
+    // ── CASE A ────────────────────────────────────────────────────────
+    addBox(CASE_A_X, Y_DESK_TOP, CASE_Z, a.w, a.h, a.l,
+      'rgba(0,155,205,0.30)','rgba(0,135,185,0.24)','rgba(0,110,165,0.20)','#00c8ff',
+      { label:a.name, dims:`${a.w}×${a.h}×${a.l}mm`, color:'#00c8ff' });
+    // Front vent lines
+    for(let i=1;i<9;i++){
+      const t=i/9, ly=Y_DESK_TOP+a.h*t;
+      addQuad([
+        [CASE_A_X-a.w/2+3, ly, CASE_Z-a.l/2-1],
+        [CASE_A_X+a.w/2-3, ly, CASE_Z-a.l/2-1],
+        [CASE_A_X+a.w/2-3, ly+2, CASE_Z-a.l/2-1],
+        [CASE_A_X-a.w/2+3, ly+2, CASE_Z-a.l/2-1],
+      ], 'rgba(0,200,255,0.18)',null,0,0.7);
+    }
+
+    // ── CASE B ────────────────────────────────────────────────────────
+    if(b && CASE_B_X !== null){
+      addBox(CASE_B_X, Y_DESK_TOP, CASE_Z, b.w, b.h, b.l,
+        'rgba(205,78,0,0.30)','rgba(185,68,0,0.24)','rgba(160,55,0,0.20)','#ff6a1a',
+        { label:b.name, dims:`${b.w}×${b.h}×${b.l}mm`, color:'#ff6a1a' });
+      for(let i=1;i<9;i++){
+        const t=i/9, ly=Y_DESK_TOP+b.h*t;
+        addQuad([
+          [CASE_B_X-b.w/2+3, ly, CASE_Z-b.l/2-1],
+          [CASE_B_X+b.w/2-3, ly, CASE_Z-b.l/2-1],
+          [CASE_B_X+b.w/2-3, ly+2, CASE_Z-b.l/2-1],
+          [CASE_B_X-b.w/2+3, ly+2, CASE_Z-b.l/2-1],
+        ], 'rgba(255,106,26,0.18)',null,0,0.7);
+      }
+    }
+
+    // ── CASE C ────────────────────────────────────────────────────────
+    if(c && CASE_C_X !== null){
+      addBox(CASE_C_X, Y_DESK_TOP, CASE_Z, c.w, c.h, c.l,
+        'rgba(80,55,180,0.30)','rgba(65,45,160,0.24)','rgba(50,35,140,0.20)','#7b6fff',
+        { label:c.name, dims:`${c.w}×${c.h}×${c.l}mm`, color:'#7b6fff' });
+      for(let i=1;i<9;i++){
+        const t=i/9, ly=Y_DESK_TOP+c.h*t;
+        addQuad([
+          [CASE_C_X-c.w/2+3, ly, CASE_Z-c.l/2-1],
+          [CASE_C_X+c.w/2-3, ly, CASE_Z-c.l/2-1],
+          [CASE_C_X+c.w/2-3, ly+2, CASE_Z-c.l/2-1],
+          [CASE_C_X-c.w/2+3, ly+2, CASE_Z-c.l/2-1],
+        ], 'rgba(123,111,255,0.18)',null,0,0.7);
+      }
+    }
+
+    // ── SORT + DRAW ───────────────────────────────────────────────────
+    allFaces.sort((fa,fb) => fb.avgRZ - fa.avgRZ);
+
+    for(const f of allFaces){
+      const pts2 = f.pts.map(([wx,wy,wz]) => proj(wx,wy,wz));
+      ctx.save();
+      ctx.beginPath();
+      pts2.forEach((p,i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+      ctx.closePath();
+      ctx.globalAlpha = f.alpha ?? 1;
+      if(f.fill){ ctx.fillStyle=f.fill; ctx.fill(); }
+      if(f.stroke && f.lw > 0){ ctx.strokeStyle=f.stroke; ctx.lineWidth=f.lw; ctx.stroke(); }
+
+      if(f.label){
+        const fcx = pts2.reduce((s,p)=>s+p.x,0)/pts2.length;
+        const fcy = pts2.reduce((s,p)=>s+p.y,0)/pts2.length;
+        ctx.globalAlpha = 0.92;
+        const fs = Math.max(9, Math.round(6*deskZoom+6));
+        ctx.font = `bold ${fs}px Rajdhani,sans-serif`;
+        ctx.fillStyle = f.label.color || '#dde4ed';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(f.label.label||'', fcx, fcy);
+        ctx.font = `${Math.max(7,Math.round(4*deskZoom+4))}px IBM Plex Mono,monospace`;
+        ctx.fillStyle = 'rgba(160,190,210,0.6)';
+        ctx.fillText(f.label.dims||'', fcx, fcy + fs + 2);
+      }
+      ctx.restore();
+    }
+
+    // ── Dim arrows for cases ──────────────────────────────────────────
+    drawDeskDim(ctx,proj,a.w,a.h,a.l, CASE_A_X, Y_DESK_TOP, CASE_Z, '#00c8ff');
+    if(b && CASE_B_X !== null)
+      drawDeskDim(ctx,proj,b.w,b.h,b.l, CASE_B_X, Y_DESK_TOP, CASE_Z, '#ff6a1a');
+    if(c && CASE_C_X !== null)
+      drawDeskDim(ctx,proj,c.w,c.h,c.l, CASE_C_X, Y_DESK_TOP, CASE_Z, '#7b6fff');
+
+    // ── Desk width dimension arrow (along front edge) ─────────────────
+    {
+      const frontZ = 0;
+      const edgeY  = -DESK_H;
+      const p1 = proj(-DESK_W/2, edgeY, frontZ);
+      const p2 = proj( DESK_W/2, edgeY, frontZ);
+      const dx=p2.x-p1.x, dy=p2.y-p1.y, len=Math.hypot(dx,dy);
+      if(len > 20){
+        const nx=-dy/len, ny=dx/len, off=14;
+        const f={x:p1.x+nx*off, y:p1.y+ny*off};
+        const t={x:p2.x+nx*off, y:p2.y+ny*off};
+        const mid={x:(f.x+t.x)/2, y:(f.y+t.y)/2};
+        const lbl = `W: ${userDeskWidthIn}" (${DESK_W}mm)`;
+        ctx.save();
+        ctx.globalAlpha=0.75; ctx.strokeStyle='#6b4e2e'; ctx.lineWidth=1.0;
+        ctx.beginPath();
+        ctx.moveTo(p1.x+nx*(off-4),p1.y+ny*(off-4)); ctx.lineTo(p1.x+nx*(off+4),p1.y+ny*(off+4));
+        ctx.moveTo(p2.x+nx*(off-4),p2.y+ny*(off-4)); ctx.lineTo(p2.x+nx*(off+4),p2.y+ny*(off+4));
+        ctx.stroke();
+        ctx.setLineDash([4,3]);
+        ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.lineTo(t.x,t.y); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha=0.9; ctx.font='bold 9px IBM Plex Mono,monospace';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        const tw=ctx.measureText(lbl).width;
+        ctx.fillStyle='rgba(8,11,14,0.85)'; ctx.fillRect(mid.x-tw/2-3,mid.y-6,tw+6,12);
+        ctx.fillStyle='#c8906a'; ctx.fillText(lbl,mid.x,mid.y);
+        ctx.restore();
+      }
+    }
+
+    // ── Desk depth dimension arrow (along LEFT edge, front to back) ───
+    {
+      const leftX = -DESK_W/2;
+      const edgeY  = -DESK_H;
+      const p1 = proj(leftX, edgeY, 0);       // front-left corner
+      const p2 = proj(leftX, edgeY, DESK_D);  // back-left corner
+      const dx=p2.x-p1.x, dy=p2.y-p1.y, len=Math.hypot(dx,dy);
+      if(len > 20){
+        const nx=-dy/len, ny=dx/len, off=14;
+        const f={x:p1.x+nx*off, y:p1.y+ny*off};
+        const t={x:p2.x+nx*off, y:p2.y+ny*off};
+        const mid={x:(f.x+t.x)/2, y:(f.y+t.y)/2};
+        const lbl = `D: ${userDeskDepthIn}" (${DESK_D}mm)`;
+        ctx.save();
+        ctx.globalAlpha=0.75; ctx.strokeStyle='#6b4e2e'; ctx.lineWidth=1.0;
+        ctx.beginPath();
+        ctx.moveTo(p1.x+nx*(off-4),p1.y+ny*(off-4)); ctx.lineTo(p1.x+nx*(off+4),p1.y+ny*(off+4));
+        ctx.moveTo(p2.x+nx*(off-4),p2.y+ny*(off-4)); ctx.lineTo(p2.x+nx*(off+4),p2.y+ny*(off+4));
+        ctx.stroke();
+        ctx.setLineDash([4,3]);
+        ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.lineTo(t.x,t.y); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha=0.9; ctx.font='bold 9px IBM Plex Mono,monospace';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        const tw=ctx.measureText(lbl).width;
+        ctx.fillStyle='rgba(8,11,14,0.85)'; ctx.fillRect(mid.x-tw/2-3,mid.y-6,tw+6,12);
+        ctx.fillStyle='#c8906a'; ctx.fillText(lbl,mid.x,mid.y);
+        ctx.restore();
+      }
+    }
+
+    // ── Zoom % indicator ─────────────────────────────────────────────
+    ctx.save();
+    ctx.font='9px IBM Plex Mono,monospace'; ctx.fillStyle='rgba(78,94,114,0.65)';
+    ctx.textAlign='right'; ctx.textBaseline='top';
+    ctx.fillText(`${Math.round(deskZoom*100)}%`, CW-10, 8);
+    ctx.restore();
+  }
+
+  redrawDesk = draw;
+  draw();
+
+  // ── Drag + zoom interaction ───────────────────────────────────────────
+  let dragging=false, lastX=0, lastY=0, lastPinch=null;
+
+  cv.addEventListener('mousedown', e=>{e.preventDefault();dragging=true;lastX=e.clientX;lastY=e.clientY;cv.classList.add('dragging');});
+  window.addEventListener('mousemove', e=>{
+    if(!dragging)return;
+    deskYaw  -=( e.clientX-lastX)*0.008;
+    deskPitch-=( e.clientY-lastY)*0.008;
+    deskPitch=Math.max(-Math.PI/2+0.05,Math.min(Math.PI/2-0.05,deskPitch));
+    lastX=e.clientX; lastY=e.clientY; draw();
+  });
+  window.addEventListener('mouseup',()=>{dragging=false;cv.classList.remove('dragging');});
+
+  cv.addEventListener('wheel',e=>{
+    e.preventDefault();
+    deskZoom=Math.max(0.3,Math.min(4.0,deskZoom*(e.deltaY<0?1.08:0.926)));
+    draw();
+  },{passive:false});
+
+  cv.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    if(e.touches.length===1){dragging=true;lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;lastPinch=null;}
+    else if(e.touches.length===2){dragging=false;lastPinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}
+  },{passive:false});
+  cv.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    if(e.touches.length===1&&lastPinch===null){
+      deskYaw  -=(e.touches[0].clientX-lastX)*0.008;
+      deskPitch-=(e.touches[0].clientY-lastY)*0.008;
+      deskPitch=Math.max(-Math.PI/2+0.05,Math.min(Math.PI/2-0.05,deskPitch));
+      lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;draw();
+    }else if(e.touches.length===2){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      if(lastPinch){deskZoom=Math.max(0.3,Math.min(4.0,deskZoom*d/lastPinch));draw();}
+      lastPinch=d;
+    }
+  },{passive:false});
+  cv.addEventListener('touchend',e=>{if(e.touches.length<2)lastPinch=null;if(e.touches.length===0)dragging=false;});
+}
+
+function drawDeskDim(ctx,proj,W,H,D,cx,cy_bot,cz,color){
+  const hw=W/2, hd=D/2;
+  // Width arrow along front-bottom edge
+  const wL=proj(cx-hw, cy_bot, cz-hd);
+  const wR=proj(cx+hw, cy_bot, cz-hd);
+  // Depth arrow along right-bottom edge
+  const dF=proj(cx+hw, cy_bot, cz-hd);
+  const dB=proj(cx+hw, cy_bot, cz+hd);
+  // Height arrow on right-front edge
+  const hB=proj(cx+hw, cy_bot,   cz-hd);
+  const hT=proj(cx+hw, cy_bot+H, cz-hd);
+
+  [[wL,wR,`W:${W}`],[dF,dB,`L:${D}`],[hB,hT,`H:${H}`]].forEach(([p1,p2,lbl])=>{
+    const dx=p2.x-p1.x,dy=p2.y-p1.y,len=Math.hypot(dx,dy);
+    if(len<12)return;
+    const nx=-dy/len,ny=dx/len,off=9;
+    ctx.save();
+    ctx.globalAlpha=0.65; ctx.strokeStyle=color; ctx.lineWidth=0.8;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath();
+    ctx.moveTo(p1.x+nx*off,p1.y+ny*off);ctx.lineTo(p2.x+nx*off,p2.y+ny*off);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(p1.x+nx*(off-3),p1.y+ny*(off-3));ctx.lineTo(p1.x+nx*(off+3),p1.y+ny*(off+3));
+    ctx.moveTo(p2.x+nx*(off-3),p2.y+ny*(off-3));ctx.lineTo(p2.x+nx*(off+3),p2.y+ny*(off+3));
+    ctx.stroke();
+    const mx=(p1.x+p2.x)/2+nx*(off+6),my=(p1.y+p2.y)/2+ny*(off+6);
+    ctx.globalAlpha=0.9; ctx.font='bold 8px IBM Plex Mono,monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    const tw=ctx.measureText(lbl).width;
+    ctx.fillStyle='rgba(8,11,14,0.8)'; ctx.fillRect(mx-tw/2-2,my-5,tw+4,10);
+    ctx.fillStyle=color; ctx.fillText(lbl,mx,my);
+    ctx.restore();
+  });
+}
+
+
+// ── SVG 2D ────────────────────────────────────────────────────────────────
+function renderSVG(wrap,a,b,view,c){
+  const SC=0.72,PT=60,PB=60,PL=50;
+  const allSlots = [a,b,c]; // slot 0=A, 1=B, 2=C — preserve nulls for color consistency
+  const colors = ['#00c8ff','#ff6a1a','#7b6fff'];
+  const fills  = ['#0c1a28','#1a100a','#100a1a'];
+  // Only process non-null slots, but keep their original slot index for color
+  const present = allSlots.map((cas,i)=>cas ? {cas,i} : null).filter(Boolean);
+
+  const dims = present.map(({cas})=>({
+    FW:Math.round(cas.w*SC), FH:Math.round(cas.h*SC), SW:Math.round(cas.l*SC)
+  }));
+  const tall   = Math.max(...dims.map(d=>d.FH));
+  const baseY  = PT + tall;
+  const viewH  = baseY + PB + 40;
+
+  let pos=[],totalW=0,x=PL;
+  const g1=50, g2=70;
+
+  present.forEach(({cas,i},pi)=>{
+    const {FW,FH,SW} = dims[pi];
+    if(view==='both'){
+      pos.push({c:cas,i,w:'front',x,sw:FW,sh:FH,by:baseY}); x+=FW+g1;
+      pos.push({c:cas,i,w:'side', x,sw:SW,sh:FH,by:baseY}); x+= SW + (pi<present.length-1 ? g2 : 0);
+    } else if(view==='front'){
+      pos.push({c:cas,i,w:'front',x,sw:FW,sh:FH,by:baseY}); x+=FW+(pi<present.length-1?g2:0);
+    } else {
+      pos.push({c:cas,i,w:'side', x,sw:SW,sh:FH,by:baseY}); x+=SW+(pi<present.length-1?g2:0);
+    }
+  });
+  totalW = x + PL;
+
+  // Defs: markers + patterns for each slot index that's used
+  let defs = '<defs>';
+  present.forEach(({i})=>{
+    const col = colors[i];
+    defs+=`<marker id="a${i}A"  markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto"><path d="M0,0L5,2.5L0,5Z" fill="${col}"/></marker>`;
+    defs+=`<marker id="a${i}AR" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto-start-reverse"><path d="M0,0L5,2.5L0,5Z" fill="${col}"/></marker>`;
+    defs+=`<pattern id="m${i}" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" stroke="${col.replace(')',',0.13)').replace('rgb','rgba')}" stroke-width="1"/></pattern>`;
+  });
+  defs += '</defs>';
+
+  let body=`<line x1="0" y1="${baseY+2}" x2="${totalW}" y2="${baseY+2}" stroke="#1a2535" stroke-width="1"/>`;
+
+  // Group labels + VS dividers for 'both' view
+  if(view==='both'){
+    // Collect group centres per present case
+    const grouped = present.map(({cas,i})=>{
+      const ps = pos.filter(p=>p.i===i);
+      return {i, x0:ps[0].x, x1:ps[ps.length-1].x+ps[ps.length-1].sw, cas};
+    });
+    grouped.forEach(g=>{
+      const cx=(g.x0+g.x1)/2;
+      body+=`<text x="${cx}" y="14" text-anchor="middle" font-family="Rajdhani" font-weight="700" font-size="13" fill="${colors[g.i]}" letter-spacing="2">${g.cas.name.toUpperCase()}</text>`;
+    });
+    for(let i=0;i<grouped.length-1;i++){
+      const mx=(grouped[i].x1+grouped[i+1].x0)/2;
+      body+=`<line x1="${mx}" y1="20" x2="${mx}" y2="${baseY}" stroke="#1c2535" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+      body+=`<text x="${mx}" y="${baseY/2+7}" text-anchor="middle" font-family="Rajdhani" font-weight="700" font-size="11" fill="#2a3a4d" letter-spacing="3" transform="rotate(-90 ${mx} ${baseY/2})">VS</text>`;
+    }
+  }
+
+  for(const p of pos){
+    const col = colors[p.i];
+    const mesh= `url(#m${p.i})`;
+    const ps  = col.replace('#','').match(/../g).map(h=>parseInt(h,16));
+    const psA = `rgba(${ps[0]},${ps[1]},${ps[2]},0.2)`;
+    const aS  = `url(#a${p.i}AR)`;
+    const aE  = `url(#a${p.i}A)`;
+    const topY= p.by-p.sh;
+    const dlbl= p.w==='front'?`W: ${p.c.w}mm`:`L: ${p.c.l}mm`;
+    const dyA = topY-16;
+    body+=`<rect x="${p.x}" y="${topY}" width="${p.sw}" height="${p.sh}" fill="${fills[p.i]}" stroke="${col}" stroke-width="1.5" rx="2" onmouseenter="showTooltip(event,'${p.c.name}\\n${dlbl} · H: ${p.c.h}mm')" onmouseleave="hideTooltip()"/>`;
+    body+=`<rect x="${p.x+10}" y="${topY+10}" width="${p.sw-20}" height="${p.sh-20}" fill="${mesh}" stroke="${psA}" stroke-width="0.8" rx="1"/>`;
+    body+=`<rect x="${p.x+12}" y="${topY+p.sh-26}" width="${p.sw*0.4}" height="14" fill="none" stroke="${psA}" stroke-width="0.8" rx="1"/>`;
+    body+=`<rect x="${p.x+6}"  y="${p.by}" width="14" height="5" fill="${fills[p.i]}" stroke="${col}" stroke-width="1"/>`;
+    body+=`<rect x="${p.x+p.sw-20}" y="${p.by}" width="14" height="5" fill="${fills[p.i]}" stroke="${col}" stroke-width="1"/>`;
+    body+=`<line x1="${p.x}" y1="${dyA}" x2="${p.x+p.sw}" y2="${dyA}" stroke="${col}" stroke-width="1" marker-start="${aS}" marker-end="${aE}"/>`;
+    body+=`<text x="${p.x+p.sw/2}" y="${dyA-4}" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="${col}">${dlbl}</text>`;
+    body+=`<text x="${p.x+p.sw/2}" y="${p.by+22}" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="#3e5060" letter-spacing="1">${p.w.toUpperCase()} VIEW</text>`;
+  }
+
+  // Height arrows — one per unique case, on left side of first panel
+  const drawnHeight = new Set();
+  for(const p of pos){
+    if(drawnHeight.has(p.i)) continue;
+    drawnHeight.add(p.i);
+    const col = colors[p.i];
+    const hx  = p.x - 18;
+    const ty0 = p.by - p.sh;
+    body+=`<line x1="${hx}" y1="${ty0}" x2="${hx}" y2="${p.by}" stroke="${col}" stroke-width="1" marker-start="url(#a${p.i}AR)" marker-end="url(#a${p.i}A)"/>`;
+    body+=`<text x="${hx-4}" y="${ty0+p.sh/2}" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="${col}" transform="rotate(-90 ${hx-4} ${ty0+p.sh/2})">H: ${p.c.h}mm</text>`;
+  }
+
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox',`0 0 ${totalW} ${viewH}`);
+  svg.classList.add('diagram');
+  svg.innerHTML=defs+body;
+  wrap.appendChild(svg);
+}
+
+// ── Info strip ─────────────────────────────────────────────────────────────
+function renderInfo(a, b, c){
+  const grid = document.getElementById('infoGrid');
+  if(!a && !b && !c){ grid.innerHTML='<div class="info-placeholder" style="min-height:80px">Search for cases above to see comparison</div>'; return; }
+
+  const slots  = [a, b, c];
+  const colors = ['var(--blue)', 'var(--orange)', '#7b6fff'];
+  const colCls = ['col-a', 'col-b', 'col-c'];
+  const present = slots.map((cas,i) => cas ? {cas,i} : null).filter(Boolean);
+  const n = present.length;
+
+  function pct(va, refs){
+    if(refs.length === 0) return '';
+    const avg = refs.reduce((s,r)=>s+r,0)/refs.length;
+    const d = (va-avg)/avg*100;
+    if(Math.abs(d)<1) return '<span class="diff diff-same">~avg</span>';
+    const s=d>0?'+':''; const cls=d>0?'diff-more':'diff-less';
+    return `<span class="diff ${cls}">${s}${d.toFixed(0)}%</span>`;
+  }
+
+  function specVal(val, unit='mm'){
+    return val != null ? `${val}${unit}` : '<span style="color:var(--muted2)">—</span>';
+  }
+
+  function cell(val, refs, unit=''){
+    const num = parseFloat(val);
+    const badge = !isNaN(num) && refs.length ? pct(num, refs) : '';
+    return `<td class="cell-val">${val}${unit} ${badge}</td>`;
+  }
+
+  // Build header
+  let thead = `<thead><tr><th class="col-label"></th>`;
+  present.forEach(({cas,i}) => {
+    const ff = formFactor(cas);
+    thead += `<th class="${colCls[i]}">${cas.name}<br><span style="font-family:'IBM Plex Mono';font-size:0.58rem;font-weight:400;color:${ff.color};letter-spacing:0.08em">${ff.label}</span></th>`;
+  });
+  thead += `</tr></thead>`;
+
+  // Rows helper
+  function row(label, vals){
+    let r = `<tr><td class="row-label">${label}</td>`;
+    vals.forEach(v => r += v);
+    return r + '</tr>';
+  }
+  function sectionRow(label){
+    const span = n + 1;
+    return `<tr class="section-header"><td colspan="${span}">${label}</td></tr>`;
+  }
+
+  // Numeric rows with % comparison
+  function numRow(label, getter, fmt, unit=''){
+    const nums = present.map(({cas}) => getter(cas));
+    const refs  = (idx) => nums.filter((_,j)=>j!==idx);
+    return row(label, present.map(({cas}, pi) => {
+      const v = getter(cas);
+      return `<td class="cell-val">${fmt(v)}${unit} ${pct(v, refs(pi))}</td>`;
+    }));
+  }
+
+  // Volume
+  const vols = present.map(({cas}) => parseFloat(((cas.l*cas.w*cas.h)/1e6).toFixed(1)));
+
+  let tbody = `<tbody>
+    ${sectionRow('Dimensions')}
+    ${numRow('Depth', c=>c.l, v=>`${v}mm / ${(v/25.4).toFixed(1)}"`, '')}
+    ${numRow('Width', c=>c.w, v=>`${v}mm / ${(v/25.4).toFixed(1)}"`, '')}
+    ${numRow('Height', c=>c.h, v=>`${v}mm / ${(v/25.4).toFixed(1)}"`, '')}
+    <tr>
+      <td class="row-label">Volume</td>
+      ${present.map(({cas},pi)=>{
+        const v=parseFloat(((cas.l*cas.w*cas.h)/1e6).toFixed(1));
+        const gal=(v/3.785).toFixed(1);
+        return `<td class="cell-val">${v} L / ${gal} gal ${pct(v, vols.filter((_,j)=>j!==pi))}</td>`;
+      }).join('')}
+    </tr>
+    ${sectionRow('Compatibility')}
+    <tr><td class="row-label">Motherboard</td>${present.map(({cas})=>`<td class="cell-val" style="font-size:0.62rem">${specVal(cas.mb,'')}</td>`).join('')}</tr>
+    ${numRow('Max GPU', c=>c.gpu, v=>v ? `${v}mm` : '—', '')}
+    ${numRow('Max Radiator', c=>c.rad, v=>v ? `${v}mm` : '—', '')}
+    ${sectionRow('Cooling')}
+    <tr><td class="row-label">Included Fans</td>${present.map(({cas})=>`<td class="cell-val">${specVal(cas.fans,'')}</td>`).join('')}</tr>
+  </tbody>`;
+
+  grid.innerHTML = `<table class="info-table">${thead}${tbody}</table>`;
+}
+
+// ── Tooltip ─────────────────────────────────────────────────────────────────
+function showTooltip(e,text){
+  const t=document.getElementById('tooltip');
+  t.innerHTML=text.replace(/\n/g,'<br>');
+  t.style.left=(e.clientX+14)+'px';
+  t.style.top=(e.clientY-10)+'px';
+  t.classList.add('show');
+}
+function hideTooltip(){ document.getElementById('tooltip').classList.remove('show'); }
+
+window.addEventListener('resize',()=>{ if(currentView==='iso')render(); });
+
+
+</script>
+</body>
+</html>
